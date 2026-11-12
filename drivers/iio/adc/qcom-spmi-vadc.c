@@ -685,7 +685,7 @@ static int vadc_get_dt_channel_data(struct device *dev,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid decimation %d\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: valores legacy qpnp-vadc */
 		}
 		prop->decimation = ret;
 	} else {
@@ -698,7 +698,7 @@ static int vadc_get_dt_channel_data(struct device *dev,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid pre-scaling <%d %d>\n",
 				chan, varr[0], varr[1]);
-			return ret;
+			ret = 0; /* a01q: valores legacy qpnp-vadc */
 		}
 		prop->prescale = ret;
 	} else {
@@ -711,7 +711,7 @@ static int vadc_get_dt_channel_data(struct device *dev,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid hw-settle-time %d us\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: valores legacy qpnp-vadc */
 		}
 		prop->hw_settle_time = ret;
 	} else {
@@ -724,7 +724,7 @@ static int vadc_get_dt_channel_data(struct device *dev,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid avg-samples %d\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: valores legacy qpnp-vadc */
 		}
 		prop->avg_samples = ret;
 	} else {

@@ -1008,8 +1008,11 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 
 	ret = of_property_read_u32(node, "reg", &chan);
 	if (ret) {
-		dev_err(dev, "invalid channel number %s\n", name);
-		return ret;
+		const char *at = strchr(kbasename(node->full_name), '@');
+		if (!at || kstrtou32(at + 1, 16, &chan)) {
+			dev_warn(dev, "a01q: skip channel %s (sin reg)\n", name);
+			return -ENODEV;
+		}
 	}
 
 	/*
@@ -1023,8 +1026,8 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 	}
 
 	if (chan > ADC_PARALLEL_ISENSE_VBAT_IDATA) {
-		dev_err(dev, "%s invalid channel number %d\n", name, chan);
-		return -EINVAL;
+		dev_warn(dev, "a01q: skip %s canal %d\n", name, chan);
+		return -ENODEV;
 	}
 
 	/* the channel has DT description */
@@ -1045,7 +1048,7 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid decimation %d\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: legacy */
 		}
 		prop->decimation = ret;
 	} else {
@@ -1058,7 +1061,7 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid pre-scaling <%d %d>\n",
 				chan, varr[0], varr[1]);
-			return ret;
+			ret = 0; /* a01q: legacy */
 		}
 		prop->prescale = ret;
 	}
@@ -1069,7 +1072,7 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid hw-settle-time %d us\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: legacy */
 		}
 		prop->hw_settle_time = ret;
 	} else {
@@ -1082,7 +1085,7 @@ static int adc_get_dt_channel_data(struct adc_chip *adc,
 		if (ret < 0) {
 			dev_err(dev, "%02x invalid avg-samples %d\n",
 				chan, value);
-			return ret;
+			ret = 0; /* a01q: legacy */
 		}
 		prop->avg_samples = ret;
 	} else {
@@ -1185,6 +1188,10 @@ static const struct of_device_id adc_match_table[] = {
 	},
 	{
 		.compatible = "qcom,spmi-adc5-lite",
+		.data = &data_pmic5_lite,
+	},
+	{
+		.compatible = "qcom,qpnp-vadc-hc",
 		.data = &data_pmic5_lite,
 	},
 	{ }

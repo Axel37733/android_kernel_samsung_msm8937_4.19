@@ -1203,3 +1203,22 @@ static noinline void __init kernel_init_freeable(void)
 	integrity_load_keys();
 	load_default_modules();
 }
+
+
+/* a01q: volcar logcat a /dev/pmsg0 (leer en TWRP: /sys/fs/pstore/pmsg-ramoops-0) */
+#include <linux/kmod.h>
+static void a01_logdump_fn(struct work_struct *w)
+{
+	static char *argv[] = { "/system/bin/sh", "-c",
+		"until [ -S /dev/socket/logdr ] && [ -c /dev/pmsg0 ]; do sleep 1; done; "
+		"exec /system/bin/logcat -b all -v threadtime '*:W' > /dev/pmsg0 2>&1", NULL };
+	static char *envp[] = { "HOME=/", "PATH=/system/bin:/system/xbin:/vendor/bin", NULL };
+	call_usermodehelper(argv[0], argv, envp, UMH_NO_WAIT);
+}
+static DECLARE_DELAYED_WORK(a01_logdump_work, a01_logdump_fn);
+static int __init a01_logdump_init(void)
+{
+	schedule_delayed_work(&a01_logdump_work, 15 * HZ);
+	return 0;
+}
+late_initcall(a01_logdump_init);
