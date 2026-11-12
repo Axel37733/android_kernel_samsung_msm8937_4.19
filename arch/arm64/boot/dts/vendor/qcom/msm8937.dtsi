@@ -573,7 +573,7 @@
 		#clock-cells = <1>;
 	};
 
-	gcc: qcom,gcc@1800000 {
+	gcc: clock_gcc: qcom,gcc@1800000 {
 		compatible = "qcom,gcc-sdm439", "syscon";
 		reg = <0x1800000 0x80000>;
 		reg-names = "cc_base";
