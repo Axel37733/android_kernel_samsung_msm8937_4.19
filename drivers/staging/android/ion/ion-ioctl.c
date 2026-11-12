@@ -55,7 +55,7 @@ static unsigned int ion_ioctl_dir(unsigned int cmd)
 	}
 }
 
-long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long __a01_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	unsigned int dir;
@@ -172,4 +172,12 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 	}
 	return ret;
+}
+
+long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	long r = __a01_ion_ioctl(filp, cmd, arg);
+	if (r < 0 && (strstr(current->comm, "qsee") || strstr(current->comm, "hardwar") || strstr(current->comm, "keymaster")))
+		pr_err("a01q ion: ion_ioctl %s cmd=0x%x ret=%ld\n", current->comm, cmd, r);
+	return r;
 }
