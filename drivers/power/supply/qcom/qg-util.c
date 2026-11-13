@@ -3,6 +3,7 @@
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  */
 
+#include <linux/math64.h>
 #include <linux/alarmtimer.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
@@ -360,6 +361,30 @@ int qg_write_monotonic_soc(struct qpnp_qg *chip, int msoc)
 	return rc;
 }
 
+
+/* a01q: NTC 10k (B=3380) de la bateria del A01, leido por el path de pull-up 100k */
+static int a01q_batt_decic_from_raw(int raw)
+{
+	static const int t_dc[] = { -200, -150, -100, -50, 0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900 };
+	static const int r_ohm[] = { 75022, 57926, 45168, 35548, 28224, 22595, 18231, 14820, 12133, 10000, 8295, 6922, 5810, 4903, 4160, 3547, 3039, 2616, 2261, 1963, 1711, 1497, 1315 };
+	int i, n = ARRAY_SIZE(t_dc);
+	s64 r;
+
+	if (raw <= 0)
+		return t_dc[n - 1];
+	if (raw >= 28900)
+		return t_dc[0];
+	r = div_s64(100000LL * raw, 28900 - raw);
+	if (r >= r_ohm[0])
+		return t_dc[0];
+	if (r <= r_ohm[n - 1])
+		return t_dc[n - 1];
+	for (i = 0; i < n - 1; i++)
+		if (r <= r_ohm[i] && r > r_ohm[i + 1])
+			return t_dc[i] + (int)div_s64((s64)(r_ohm[i] - r) * (t_dc[i + 1] - t_dc[i]), r_ohm[i] - r_ohm[i + 1]);
+	return 250;
+}
+
 int qg_get_battery_temp(struct qpnp_qg *chip, int *temp)
 {
 	int rc = 0;
@@ -369,7 +394,7 @@ int qg_get_battery_temp(struct qpnp_qg *chip, int *temp)
 		return 0;
 	}
 
-	rc = iio_read_channel_processed(chip->batt_therm_chan, temp);
+	{ int a01q_raw; rc = iio_read_channel_raw(chip->batt_therm_chan, &a01q_raw); if (rc >= 0) { *temp = a01q_batt_decic_from_raw(a01q_raw); rc = 0; pr_info_once("a01q: batt raw=%d -> %d decic\n", a01q_raw, *temp); } }
 	if (rc < 0) {
 		pr_err("Failed reading BAT_TEMP over ADC rc=%d\n", rc);
 		return rc;
